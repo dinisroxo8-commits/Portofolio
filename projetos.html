@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meus Projetos</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212;
+    color: #eee;
+    margin: 0;
+    padding: 20px;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 40px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .projetos-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .projeto {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: #eee;
+  }
+
+  .projeto:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 20px rgba(0, 150, 255, 0.7);
+  }
+
+  .projeto h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+
+  .projeto p {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: #bbb;
+  }
+</style>
+</head>
+<body>
+  <h1>Meus Projetos</h1>
+  <div class="projetos-container">
+
+    <a class="projeto" href="http://127.0.0.1:5500/Site.html" target="_blank" rel="noopener noreferrer">
+      <h3>Projeto 1</h3>
+      <p>Meu portofolio.</p>
+    </a>
+
+    <a class="projeto" href="http://127.0.0.1:5500/algortmo.html" target="_blank" rel="noopener noreferrer">
+      <h3>Projeto 2</h3>
+      <p>O que é um algoritmo?</p>
+    </a>
+
+  </div>
+</body>
+</html>

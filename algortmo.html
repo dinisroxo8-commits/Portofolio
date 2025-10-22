@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>O que é um algoritmo</title>
+  <style>
+    /* =====================
+       Variáveis globais (:root)
+       ===================== */
+    :root{
+      --bg: #0b0f14;
+      --panel: #0f1720;
+      --muted: #94a3b8;
+      --accent: #6ee7b7; /* verde suave */
+      --accent-2: #7dd3fc; /* azul leve */
+      --glass: rgba(255,255,255,0.04);
+      --glass-2: rgba(255,255,255,0.02);
+      --card-radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+      --ui-gap: 18px;
+      --shadow: 0 8px 30px rgba(2,6,23,0.7);
+      --transition: 280ms cubic-bezier(.2,.8,.2,1);
+    }
+
+    /* system prefers light? still keep darklike tune */
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f6f8fb;
+        --panel: #ffffff;
+        --muted: #475569;
+        --accent: #0f766e;
+        --glass: rgba(2,6,23,0.03);
+        --glass-2: rgba(2,6,23,0.02);
+        --shadow: 0 10px 30px rgba(15,23,42,0.06);
+      }
+    }
+
+    /* ==== Reset & base ==== */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:linear-gradient(180deg,var(--bg), #071021 60%);
+      color: #e6eef6; -webkit-font-smoothing:antialiased;
+      padding:36px;display:flex;align-items:flex-start;justify-content:center;
+      gap:24px;
+    }
+
+    .container{width:1100px;max-width:96vw;display:grid;grid-template-columns:420px 1fr;gap:24px}
+
+    header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 6px 20px rgba(79,70,229,0.12);display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    /* Sidebar card */
+    .card{background:linear-gradient(180deg,var(--panel),rgba(255,255,255,0.02));padding:18px;border-radius:var(--card-radius);box-shadow:var(--shadow)}
+    .sidebar{display:flex;flex-direction:column;gap:12px}
+    .section-title{font-size:13px;color:var(--muted);margin-bottom:8px}
+
+    nav .topic{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;cursor:pointer;transition:all var(--transition)}
+    nav .topic:hover{transform:translateX(6px)}
+    nav .topic.active{background:linear-gradient(90deg,rgba(255,255,255,0.02),transparent);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02)}
+
+    main{display:flex;flex-direction:column;gap:18px}
+
+    /* content area */
+    .explain{padding:18px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent)}
+    .explain h2{margin:0 0 8px 0}
+    .explain p{margin:0;color:var(--muted);line-height:1.5}
+
+    /* example area */
+    .examples{display:grid;grid-template-columns:1fr;gap:14px}
+    .example{padding:14px;border-radius:12px;background:var(--glass)}
+    .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+    /* visualizer bars */
+    .visual{height:180px;display:flex;align-items:end;gap:6px;padding:12px;background:linear-gradient(180deg,var(--glass-2),transparent);border-radius:10px}
+    .bar{flex:1;min-width:6px;border-radius:6px;background:linear-gradient(180deg,var(--accent),rgba(255,255,255,0.04));display:flex;align-items:flex-end;justify-content:center;color:#042022;font-weight:700;font-size:11px}
+    .bar.small{background:linear-gradient(180deg,var(--accent-2),rgba(255,255,255,0.04));}
+
+    /* code block */
+    pre{margin:0;background:#041024;padding:12px;border-radius:8px;overflow:auto;font-family:var(--mono);font-size:12px}
+
+    footer{grid-column:1/-1;color:var(--muted);font-size:13px}
+
+    /* responsive */
+    @media (max-width:980px){
+      .container{grid-template-columns:1fr}
+      header{flex-direction:column;align-items:flex-start;gap:10px}
+    }
+
+    /* small helpers */
+    .muted{color:var(--muted);font-size:13px}
+    button{background:transparent;border:0;color:var(--accent);padding:8px;border-radius:8px;cursor:pointer;transition:all var(--transition)}
+    button.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#022;box-shadow:0 8px 24px rgba(13,52,45,0.18)}
+    input[type=range]{width:140px}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">AL</div>
+        <div>
+          <h1>O que é um algoritmo?</h1>
+          <p class="lead">Explicação de um algoritmo — veja como ideias se tornam passos.</p>
+        </div>
+      </div>
+      <div class="muted">•Algoritmo • Interativo</div>
+    </header>
+
+    <aside class="card sidebar">
+      <div>
+        <div class="section-title">Tópicos</div>
+        <nav>
+          <div class="topic active" data-view="intro">Introdução</div>
+          <div class="topic" data-view="linear">Busca linear (interativa)</div>
+          <div class="topic" data-view="bubble">Ordenação: Bubble Sort</div>
+          <div class="topic" data-view="recursion">Recursão: Fatorial</div>
+        </nav>
+      </div>
+
+      <div>
+        <div class="section-title">Controles</div>
+        <div class="controls">
+          <label class="muted">Velocidade</label>
+          <input id="speed" type="range" min="50" max="1200" value="300">
+          <button id="resetBtn">Reset</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Dica rápida</div>
+        <p class="muted">Um algoritmo é um conjunto finito de passos bem definidos para resolver um problema. Pode ser expresso em linguagem natural, pseudocódigo ou código real — aqui mostramos como pensar em passos e ver execução.</p>
+      </div>
+    </aside>
+
+    <main>
+      <section class="card explain" id="view-intro">
+        <h2>O que é um algoritmo?</h2>
+        <p>Um <strong>algoritmo</strong> é uma sequência finita e ordenada de instruções que transforma uma entrada numa saída. Ex.: receita de cozinha, instruções para montar um móvel, ou um programa para ordenar números.</p>
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,0.04);margin:12px 0">
+        <p class="muted">Nesta página: veja a busca, a ordenação passo-a-passo e um exemplo recursivo, todos com controles e visualizações.</p>
+      </section>
+
+      <section class="card example" id="view-linear" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <strong>Busca linear (Linear Search)</strong>
+          <div class="muted">Procura um valor percorrendo a lista</div>
+        </div>
+        <div class="controls" style="margin-bottom:10px">
+          <label class="muted">Array (comma)</label>
+          <input id="linearInput" value="8,3,1,7,4,10,2,9,5" style="padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:inherit">
+          <label class="muted">Procurar</label>
+          <input id="linearTarget" value="7" style="width:70px;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:inherit">
+          <button id="linearStart" class="primary">Iniciar</button>
+        </div>
+        <div id="linearVisual" class="visual"></div>
+        <div id="linearLog" style="margin-top:8px"><pre id="linearPre">Pronto. Clique "Iniciar" para ver a busca.</pre></div>
+      </section>
+
+      <section class="card example" id="view-bubble" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <strong>Bubble Sort (Passo a passo)</strong>
+          <div class="muted">Comparações e trocas visíveis</div>
+        </div>
+        <div class="controls" style="margin-bottom:10px">
+          <label class="muted">Array</label>
+          <input id="bubbleInput" value="9,3,7,1,6,4,2,5" style="padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:inherit">
+          <button id="bubbleStart" class="primary">Executar</button>
+        </div>
+        <div id="bubbleVisual" class="visual"></div>
+        <div id="bubblePreWrap" style="margin-top:8px"><pre id="bubblePre">Clique "Executar" para começar o Bubble Sort.</pre></div>
+      </section>
+
+      <section class="card example" id="view-recursion" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <strong>Recursão — Fatorial</strong>
+          <div class="muted">Veja chamadas e retorno de valores</div>
+        </div>
+        <div class="controls" style="margin-bottom:10px">
+          <label class="muted">n</label>
+          <input id="factN" type="number" min="0" max="12" value="6" style="width:90px;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:inherit">
+          <button id="factStart" class="primary">Calcular</button>
+        </div>
+        <div id="factLog" style="margin-top:6px"><pre id="factPre">Resultado aparecerá aqui com passos da recursão.</pre></div>
+      </section>
+
+    </main>
+ </div>
+
+  <script>
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => document.querySelectorAll(sel);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  $$('.topic').forEach(el => el.addEventListener('click', () => {
+    $$('.topic').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const view = el.dataset.view;
+    showView(view);
+  }));
+
+  function showView(v) {
+    ['intro', 'linear', 'bubble', 'recursion'].forEach(name => {
+      const node = document.getElementById('view-' + name);
+      if (node) node.style.display = (name === v ? '' : 'none');
+    });
+  }
+
+  const speedInput = document.getElementById('speed');
+  function getDelay() { return parseInt(speedInput.value); }
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    location.reload();
+  });
+
+  const linearVisual = document.getElementById('linearVisual');
+  const linearPre = document.getElementById('linearPre');
+
+  function renderArray(container, arr, highlightIndex = -1, foundIndex = -1) {
+    container.innerHTML = '';
+    const max = Math.max(...arr.map(x => Math.abs(x))) || 1;
+    arr.forEach((v, i) => {
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      const height = Math.max(8, Math.round((v / max) * 100));
+      bar.style.height = height + '%';
+      bar.textContent = v;
+      if (i === highlightIndex) bar.style.outline = '3px solid rgba(125,211,252,0.12)';
+      if (i === foundIndex) bar.style.boxShadow = '0 6px 18px rgba(125,211,252,0.12)';
+      container.appendChild(bar);
+    });
+  }
+
+  document.getElementById('linearStart').addEventListener('click', async () => {
+    const arr = $('#linearInput').value.split(',').map(s => parseInt(s.trim())).filter(x => !Number.isNaN(x));
+    const target = parseInt($('#linearTarget').value);
+    linearPre.textContent = 'Procurando ' + target + '...';
+    renderArray(linearVisual, arr);
+    let found = -1;
+    for (let i = 0; i < arr.length; i++) {
+      renderArray(linearVisual, arr, i);
+      linearPre.textContent = `Acessando índice ${i}, valor = ${arr[i]}`;
+      await sleep(getDelay());
+      if (arr[i] === target) {
+        found = i;
+        renderArray(linearVisual, arr, i, i);
+        linearPre.textContent = `Encontrado em índice ${i}`;
+        break;
+      }
+    }
+    if (found === -1) linearPre.textContent = 'Não encontrado.';
+  });
+
+  const bubbleVisual = document.getElementById('bubbleVisual');
+  const bubblePre = document.getElementById('bubblePre');
+
+  async function bubbleSortVisual(arr) {
+    const a = arr.slice();
+    const n = a.length;
+    bubblePre.textContent = 'Iniciando Bubble Sort...';
+    for (let i = 0; i < n; i++) {
+      let swapped = false;
+      for (let j = 0; j < n - 1 - i; j++) {
+        renderArray(bubbleVisual, a, j, -1);
+        bubblePre.textContent = `Comparando índices ${j} e ${j + 1} → ${a[j]} vs ${a[j + 1]}`;
+        await sleep(getDelay());
+        if (a[j] > a[j + 1]) {
+          bubblePre.textContent = `Troca: ${a[j]} ⇄ ${a[j + 1]}`;
+          await sleep(getDelay() / 1.6);
+          const tmp = a[j]; a[j] = a[j + 1]; a[j + 1] = tmp; swapped = true;
+          renderArray(bubbleVisual, a, j, j + 1);
+          await sleep(getDelay() / 1.4);
+        }
+      }
+      if (!swapped) {
+        bubblePre.textContent = 'Nenhuma troca no passo — array ordenado.';
+        break;
+      }
+    }
+    bubblePre.textContent = 'Ordenação concluída: [' + a.join(', ') + ']';
+    renderArray(bubbleVisual, a);
+  }
+
+  document.getElementById('bubbleStart').addEventListener('click', () => {
+    const arr = $('#bubbleInput').value.split(',').map(s => parseInt(s.trim())).filter(x => !Number.isNaN(x));
+    renderArray(bubbleVisual, arr);
+    bubbleSortVisual(arr);
+  });
+
+  const factPre = document.getElementById('factPre');
+  document.getElementById('factStart').addEventListener('click', async () => {
+    const n = parseInt($('#factN').value);
+    factPre.textContent = '';
+    async function fact(x) {
+      factPre.textContent += `chamada: fact(${x})\n`;
+      await sleep(getDelay() / 2);
+      if (x <= 1) {
+        factPre.textContent += `retorna 1 (base)\n`;
+        return 1;
+      }
+      const r = await fact(x - 1);
+      const res = x * r;
+      factPre.textContent += `retorna ${res} = ${x} * ${r}\n`;
+      await sleep(getDelay() / 2);
+      return res;
+    }
+    const result = await fact(n);
+    factPre.textContent += `\nResultado: ${n}! = ${result}`;
+  });
+
+  renderArray(linearVisual, [8, 3, 1, 7, 4, 10, 2, 9, 5]);
+  renderArray(bubbleVisual, [9, 3, 7, 1, 6, 4, 2, 5]);
+  showView('intro');
+</script>
+</body>
+</html>

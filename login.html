@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Login, Sign Up e Configuração</title>
+<style>
+  body {
+    font-family: 'Open Sans', sans-serif;
+    background: #f9f9f9;
+    margin: 0; padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .container {
+    background: white;
+    border-radius: 12px;
+    padding: 30px 40px;
+    width: 320px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+  h2 {
+    color: #0a4c8a;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  form {
+    display: flex;
+    flex-direction: column;
+  }
+  label {
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+  }
+  input[type="text"], input[type="email"], input[type="password"] {
+    padding: 8px 10px;
+    margin-bottom: 1rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+  }
+  button {
+    background: #0a4c8a;
+    color: white;
+    border: none;
+    padding: 10px 0;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    margin-bottom: 1rem;
+  }
+  button:hover {
+    background: #073a62;
+  }
+  .link-btn {
+    background: none;
+    color: #0a4c8a;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.9rem;
+    margin-top: -10px;
+    margin-bottom: 1rem;
+  }
+  .hidden {
+    display: none;
+  }
+  .profile-info p {
+    margin: 0.5rem 0;
+  }
+  .profile-info label {
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="container" id="login-form">
+  <h2>Login</h2>
+  <form id="form-login">
+    <label for="login-email">Email:</label>
+    <input type="email" id="login-email" required placeholder="email@exemplo.com" />
+    
+    <label for="login-password">Senha:</label>
+    <input type="password" id="login-password" required placeholder="Sua senha" />
+    
+    <button type="submit">Entrar</button>
+  </form>
+  <button class="link-btn" id="go-to-signup">Não tem conta? Cadastre-se</button>
+</div>
+
+<div class="container hidden" id="signup-form">
+  <h2>Cadastro</h2>
+  <form id="form-signup">
+    <label for="signup-name">Nome:</label>
+    <input type="text" id="signup-name" required placeholder="Seu nome completo" />
+    
+    <label for="signup-email">Email:</label>
+    <input type="email" id="signup-email" required placeholder="email@exemplo.com" />
+    
+    <label for="signup-password">Senha:</label>
+    <input type="password" id="signup-password" required placeholder="Crie uma senha" />
+    
+    <button type="submit">Cadastrar</button>
+  </form>
+  <button class="link-btn" id="go-to-login">Já tem conta? Faça login</button>
+</div>
+
+<div class="container hidden" id="profile-config">
+  <h2>Configuração de Perfil</h2>
+  <form id="form-profile">
+    <label for="profile-name">Nome:</label>
+    <input type="text" id="profile-name" required />
+    
+    <label for="profile-email">Email:</label>
+    <input type="email" id="profile-email" required readonly />
+    
+    <button type="submit">Salvar</button>
+  </form>
+  <button class="link-btn" id="logout-btn">Sair</button>
+</div>
+
+<script>
+  // Elementos
+  const loginForm = document.getElementById('login-form');
+  const signupForm = document.getElementById('signup-form');
+  const profileConfig = document.getElementById('profile-config');
+
+  const goToSignupBtn = document.getElementById('go-to-signup');
+  const goToLoginBtn = document.getElementById('go-to-login');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  // Formulários
+  const formLogin = document.getElementById('form-login');
+  const formSignup = document.getElementById('form-signup');
+  const formProfile = document.getElementById('form-profile');
+
+  // Armazenar usuários simples no localStorage
+  function getUsers() {
+    return JSON.parse(localStorage.getItem('users') || '[]');
+  }
+
+  function saveUsers(users) {
+    localStorage.setItem('users', JSON.stringify(users));
+  }
+
+  // Usuário logado
+  function getCurrentUser() {
+    return JSON.parse(localStorage.getItem('currentUser'));
+  }
+
+  function setCurrentUser(user) {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+  }
+
+  function clearCurrentUser() {
+    localStorage.removeItem('currentUser');
+  }
+
+  // Mostrar telas
+  function showLogin() {
+    loginForm.classList.remove('hidden');
+    signupForm.classList.add('hidden');
+    profileConfig.classList.add('hidden');
+  }
+
+  function showSignup() {
+    loginForm.classList.add('hidden');
+    signupForm.classList.remove('hidden');
+    profileConfig.classList.add('hidden');
+  }
+
+  function showProfile(user) {
+    loginForm.classList.add('hidden');
+    signupForm.classList.add('hidden');
+    profileConfig.classList.remove('hidden');
+
+    document.getElementById('profile-name').value = user.name;
+    document.getElementById('profile-email').value = user.email;
+  }
+
+  // Login submit
+  formLogin.addEventListener('submit', e => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
+
+    const users = getUsers();
+    const user = users.find(u => u.email === email && u.password === password);
+
+    if(user) {
+      setCurrentUser(user);
+      showProfile(user);
+    } else {
+      alert('Email ou senha inválidos.');
+    }
+  });
+
+  // Signup submit
+  formSignup.addEventListener('submit', e => {
+    e.preventDefault();
+    const name = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('signup-email').value.trim().toLowerCase();
+    const password = document.getElementById('signup-password').value;
+
+    let users = getUsers();
+    if(users.some(u => u.email === email)) {
+      alert('Este email já está cadastrado.');
+      return;
+    }
+
+    const newUser = { name, email, password };
+    users.push(newUser);
+    saveUsers(users);
+    setCurrentUser(newUser);
+
+    showProfile(newUser);
+  });
+
+  // Profile submit (salvar nome)
+  formProfile.addEventListener('submit', e => {
+    e.preventDefault();
+    const name = document.getElementById('profile-name').value.trim();
+    const email = document.getElementById('profile-email').value;
+
+    let users = getUsers();
+    const index = users.findIndex(u => u.email === email);
+
+    if(index !== -1) {
+      users[index].name = name;
+      saveUsers(users);
+      setCurrentUser(users[index]);
+      alert('Perfil atualizado com sucesso!');
+    }
+  });
+
+  // Botões de navegação
+  goToSignupBtn.addEventListener('click', e => {
+    showSignup();
+  });
+
+  goToLoginBtn.addEventListener('click', e => {
+    showLogin();
+  });
+
+  logoutBtn.addEventListener('click', e => {
+    clearCurrentUser();
+    showLogin();
+  });
+
+  // Se já estiver logado, mostrar perfil direto
+  window.onload = () => {
+    const currentUser = getCurrentUser();
+    if(currentUser) {
+      showProfile(currentUser);
+    } else {
+      showLogin();
+    }
+  }
+</script>
+
+</body>
+</html>

@@ -18,6 +18,8 @@
       .chat-input { display:flex; padding:10px; gap:8px; background:#222238; border-top:1px solid #3a3a5a; }
       textarea { flex:1; resize:none; background:#1e1e2f; color:white; border:none; border-radius:5px; padding:10px; font-size:14px; }
       button.primary { padding:10px 15px; background:#5a5aff; color:white; border:none; border-radius:6px; cursor:pointer; }
+      .file-chip { background:#3a3a5a; padding:6px 10px; border-radius:5px; font-size:13px; display:flex; gap:6px; align-items:center; }
+      .file-chip span.remove { cursor:pointer; font-weight:bold; color:#ff5a5a; }
     </style>
   </head>
   <body>
@@ -34,13 +36,17 @@
 
       <div id="chatContent" class="chat-content" role="log" aria-live="polite"></div>
 
+      <div id="filePreview" style="padding:8px 12px; background:#1e1e2f; min-height:20px; display:none; flex-wrap:wrap; gap:8px;"></div>
+
       <div class="chat-input">
+        <input type="file" id="fileInput" style="display:none" accept=".txt,.pdf,.jpg,.jpeg,.png,.gif" multiple />
+        <button id="fileBtn" class="primary" style="background:#4a4aff" title="Anexar ficheiros">📎</button>
         <textarea id="userInput" placeholder="Escreve aqui... (Enter envia, Shift+Enter nova linha)"></textarea>
         <button id="sendBtn" class="primary">Enviar</button>
       </div>
 
       <div style="padding:10px 12px; background:transparent">
-        <div style="font-size:13px;color:#aaa">Comandos locais: <code>procura: termo</code>, <code>adicionar: Título | Texto</code>, <code>muda idioma: pt/en</code>, consultas de <code>tempo em cidade</code>, expressões matemáticas (ex: 2+2*3) e <code>hora</code>.</div>
+        <div style="font-size:13px;color:#aaa">Comandos locais: <code>procura: termo</code>, <code>adicionar: Título | Texto</code>, <code>muda idioma: pt/en</code>, consultas de <code>tempo em cidade</code>, expressões matemáticas (ex: 2+2*3) e <code>hora</code>. Anexa ficheiros com 📎</div>
         <div id="kbList" class="kb-list" style="margin-top:8px"></div>
       </div>
     </div>
@@ -63,10 +69,15 @@
       const chat = document.getElementById('chatContent');
       const input = document.getElementById('userInput');
       const sendBtn = document.getElementById('sendBtn');
+      const fileBtn = document.getElementById('fileBtn');
+      const fileInput = document.getElementById('fileInput');
+      const filePreview = document.getElementById('filePreview');
       const openaiKeyInput = document.getElementById('openaiKey');
       const weatherKeyInput = document.getElementById('weatherKey');
       const modelSel = document.getElementById('model');
       const kbList = document.getElementById('kbList');
+
+      let attachedFiles = [];
 
       // Load / Save
       function loadState(){ try{ const r = localStorage.getItem(LS_KEY); if(r) state = Object.assign(state, JSON.parse(r)); }catch(e){} }
@@ -94,7 +105,7 @@
 
       function localResponder(msg){
         const q = msg.trim(); const lq = q.toLowerCase();
-        if(/^ajuda$|^help$/i.test(lq)) return `Comandos:\n- ajuda\n- procura: termo\n- adicionar: Título | Texto\n- muda idioma: pt/en\n- tempo em CIDADE\n- expressões matemáticas`;
+        if(/^ajuda$|^help$/i.test(lq)) return `Comandos:\n- ajuda\n- procura: termo\n- adicionar: Título | Texto\n- muda idioma: pt/en\n- tempo em CIDADE\n- expressões matemáticas\n- Anexar ficheiros com 📎`;
         if(lq.startsWith('procura:')){ const term=q.split(':').slice(1).join(':').trim(); if(!term) return 'Diz o que procurar depois de "procura:".'; const hits=kbSearch(term); if(!hits.length) return 'Nenhum resultado na KB local.'; return hits.map(h=>`${h.title}\n${h.text}`).join('\n\n'); }
         if(lq.startsWith('adicionar:')){ const rest=q.split(':').slice(1).join(':').trim(); const parts=rest.split('|').map(s=>s.trim()); if(parts.length<2) return 'Usa: adicionar: Título | Texto'; const [title,text]=parts; const kb=loadKB(); const id=kb.length?Math.max(...kb.map(x=>x.id))+1:1; kb.push({id,title,text}); saveKB(kb); return `Adicionado à KB (id ${id}): ${title}`; }
         if(lq.startsWith('muda idioma:')){ const lang=q.split(':').slice(1).join(':').trim().toLowerCase(); if(['pt','pt-pt'].includes(lang)){ state.language='pt'; state.systemPrompt='És um assistente útil que responde em Português.'; saveState(); return 'Idioma alterado para Português.' } if(['en','en-us','en-uk'].includes(lang)){ state.language='en'; state.systemPrompt='You are a helpful assistant that replies in English.'; saveState(); return 'Language changed to English.' } return 'Idioma desconhecido. Usa pt ou en.' }
@@ -108,35 +119,207 @@
       // Safe math evaluator
       function evalMath(expr){ const safe = expr.replace(/\^/g,'**').replace(/[^0-9+\-*/().%\s\*\*]/g,''); if(!/^[0-9+\-*/().%\s\*\*]+$/.test(safe)) return null; try{ const fn = new Function('return ' + safe); const res = fn(); return String(res); }catch(e){ return null } }
 
-      // OpenAI call (non-streaming)
-      async function askOpenAI(apiKey, model, messages){ const payload={model,messages,max_tokens:800,temperature:0.7}; const resp=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify(payload)}); if(!resp.ok){ const txt=await resp.text(); throw new Error(txt||resp.status); } const data=await resp.json(); return data.choices?.[0]?.message?.content || ''; }
+      // File handling
+      function renderFilePreview(){ 
+        if(!attachedFiles.length){ 
+          filePreview.style.display='none'; 
+          return; 
+        } 
+        filePreview.style.display='flex'; 
+        filePreview.innerHTML=''; 
+        attachedFiles.forEach((f,i)=>{ 
+          const chip=document.createElement('div'); 
+          chip.className='file-chip';
+          chip.innerHTML=`<span>📄 ${f.name}</span><span class="remove" data-idx="${i}">×</span>`; 
+          filePreview.appendChild(chip); 
+        }); 
+        filePreview.querySelectorAll('.remove').forEach(el=>{ 
+          el.addEventListener('click',()=>{ 
+            attachedFiles.splice(+el.dataset.idx,1); 
+            renderFilePreview(); 
+          }); 
+        }); 
+      }
+
+      async function readFileAsBase64(file){ 
+        return new Promise((res,rej)=>{ 
+          const r=new FileReader(); 
+          r.onload=()=>res(r.result.split(',')[1]); 
+          r.onerror=rej; 
+          r.readAsDataURL(file); 
+        }); 
+      }
+      
+      async function readFileAsText(file){ 
+        return new Promise((res,rej)=>{ 
+          const r=new FileReader(); 
+          r.onload=()=>res(r.result); 
+          r.onerror=rej; 
+          r.readAsText(file); 
+        }); 
+      }
+
+      async function processFiles(){ 
+        const processed=[]; 
+        for(const file of attachedFiles){ 
+          const type=file.type; 
+          const name=file.name; 
+          if(type.startsWith('image/')){ 
+            const b64=await readFileAsBase64(file); 
+            processed.push({type:'image',name,data:b64,mimeType:type}); 
+          } else if(type==='application/pdf'){ 
+            const b64=await readFileAsBase64(file); 
+            processed.push({type:'pdf',name,data:b64}); 
+          } else { 
+            const txt=await readFileAsText(file); 
+            processed.push({type:'text',name,data:txt}); 
+          } 
+        } 
+        return processed; 
+      }
+
+      // OpenAI call with file support
+      async function askOpenAI(apiKey, model, messages, files=[]){ 
+        const userContent = [];
+        const lastMsg = messages[messages.length-1];
+        if(lastMsg.content) userContent.push({type:'text',text:lastMsg.content});
+        
+        for(const f of files){
+          if(f.type==='image'){ 
+            userContent.push({type:'image_url',image_url:{url:`data:${f.mimeType};base64,${f.data}`}}); 
+          }
+          else if(f.type==='text'){ 
+            userContent.push({type:'text',text:`\n\n[Conteúdo do ficheiro "${f.name}"]:\n${f.data}`}); 
+          }
+          else if(f.type==='pdf'){ 
+            userContent.push({type:'text',text:`\n\n[Ficheiro PDF "${f.name}" anexado - processamento limitado em base64]`}); 
+          }
+        }
+        
+        const finalMessages = [...messages.slice(0,-1), {role:'user',content:userContent.length>1?userContent:lastMsg.content}];
+        const payload={model,messages:finalMessages,max_tokens:1200,temperature:0.7}; 
+        const resp=await fetch('https://api.openai.com/v1/chat/completions',{
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'Authorization':'Bearer '+apiKey
+          },
+          body:JSON.stringify(payload)
+        }); 
+        if(!resp.ok){ 
+          const txt=await resp.text(); 
+          throw new Error(txt||resp.status); 
+        } 
+        const data=await resp.json(); 
+        return data.choices?.[0]?.message?.content || ''; 
+      }
 
       // Main send
       let busy=false;
-      async function onSend(){ if(busy) return; const text = input.value.trim(); if(!text) return; input.value=''; addMessage(text,'user');
+      async function onSend(){ 
+        if(busy) return; 
+        const text = input.value.trim(); 
+        if(!text && !attachedFiles.length) return; 
+        
+        const userMsg = text || '(ficheiro anexado)';
+        input.value=''; 
+        const files = await processFiles();
+        attachedFiles = [];
+        renderFilePreview();
+        
+        addMessage(userMsg + (files.length ? ` 📎 [${files.length} ficheiro(s)]` : ''),'user');
+        
         const weatherMatch = text.match(/tempo (?:em|no|na)?\s*([a-zA-ZÀ-ÿ\-\s]+)/i);
         const mathMatch = text.match(/^\s*([0-9().+\-*/%^\s]+)\s*$/);
         const horaMatch = /\bhora\b|que horas|hora é/i.test(text);
 
-        if(weatherMatch && weatherKeyInput.value.trim()){ busy=true; const t=showTyping(); const cidade = weatherMatch[1].trim(); const w = await getWeather(cidade, weatherKeyInput.value.trim()); t.remove(); busy=false; if(w){ addMessage(w,'bot'); return } }
-        if(mathMatch){ const out = evalMath(mathMatch[1]); if(out!==null){ addMessage('Resposta: ' + out,'bot'); return } }
-        if(horaMatch){ const now=new Date(); addMessage('Agora: ' + now.toLocaleString(),'bot'); return }
-        if(/^(procura:|adicionar:|muda idioma:|ajuda$|help$)/i.test(text)){ const r = localResponder(text); addMessage(r,'bot'); return }
+        if(weatherMatch && weatherKeyInput.value.trim() && !files.length){ 
+          busy=true; 
+          const t=showTyping(); 
+          const cidade = weatherMatch[1].trim(); 
+          const w = await getWeather(cidade, weatherKeyInput.value.trim()); 
+          t.remove(); 
+          busy=false; 
+          if(w){ addMessage(w,'bot'); return } 
+        }
+        if(mathMatch && !files.length){ 
+          const out = evalMath(mathMatch[1]); 
+          if(out!==null){ addMessage('Resposta: ' + out,'bot'); return } 
+        }
+        if(horaMatch && !files.length){ 
+          const now=new Date(); 
+          addMessage('Agora: ' + now.toLocaleString(),'bot'); 
+          return; 
+        }
+        if(/^(procura:|adicionar:|muda idioma:|ajuda$|help$)/i.test(text) && !files.length){ 
+          const r = localResponder(text); 
+          addMessage(r,'bot'); 
+          return; 
+        }
 
         const apiKey = openaiKeyInput.value.trim() || getAPIKey();
-        if(apiKey){ busy=true; const t=showTyping(); try{ const messages=[{role:'system',content:state.systemPrompt}, ...state.messages.slice(-10).map(m=>({role:m.who==='user'?'user':'assistant',content:m.text})), {role:'user',content:text}]; const reply = await askOpenAI(apiKey, modelSel.value||'gpt-4o-mini', messages); t.remove(); busy=false; addMessage(reply||'(sem resposta)','bot'); }catch(err){ t.remove(); busy=false; console.error(err); addMessage('Erro OpenAI: '+String(err),'bot'); const fallback = localResponder(text); addMessage(fallback,'bot'); } }
-        else { const r = localResponder(text); addMessage(r,'bot'); }
+        if(apiKey){ 
+          busy=true; 
+          const t=showTyping(); 
+          try{ 
+            const messages=[
+              {role:'system',content:state.systemPrompt}, 
+              ...state.messages.slice(-10).map(m=>({role:m.who==='user'?'user':'assistant',content:m.text})), 
+              {role:'user',content:text||'Analisa este(s) ficheiro(s)'}
+            ]; 
+            const reply = await askOpenAI(apiKey, modelSel.value||'gpt-4o-mini', messages, files); 
+            t.remove(); 
+            busy=false; 
+            addMessage(reply||'(sem resposta)','bot'); 
+          }catch(err){ 
+            t.remove(); 
+            busy=false; 
+            console.error(err); 
+            addMessage('Erro OpenAI: '+String(err),'bot'); 
+            if(!files.length){ 
+              const fallback = localResponder(text); 
+              addMessage(fallback,'bot'); 
+            } 
+          } 
+        }
+        else { 
+          if(files.length){ 
+            addMessage('Para processar ficheiros, insere a OpenAI API key no topo.','bot'); 
+          } else { 
+            const r = localResponder(text); 
+            addMessage(r,'bot'); 
+          } 
+        }
       }
 
       // Init
-      loadState(); renderKB(); openaiKeyInput.value = getAPIKey(); modelSel.value = localStorage.getItem(LS_MODEL) || 'gpt-4o-mini';
+      loadState(); 
+      renderKB(); 
+      openaiKeyInput.value = getAPIKey(); 
+      modelSel.value = localStorage.getItem(LS_MODEL) || 'gpt-4o-mini';
+      
       sendBtn.addEventListener('click', onSend);
-      input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); onSend(); } });
-      openaiKeyInput.addEventListener('change', ()=>{ setAPIKey(openaiKeyInput.value.trim()); });
-      modelSel.addEventListener('change', ()=>{ localStorage.setItem(LS_MODEL, modelSel.value); });
+      fileBtn.addEventListener('click', ()=>fileInput.click());
+      fileInput.addEventListener('change', (e)=>{ 
+        attachedFiles.push(...Array.from(e.target.files)); 
+        renderFilePreview(); 
+        e.target.value=''; 
+      });
+      input.addEventListener('keydown', (e)=>{ 
+        if(e.key==='Enter' && !e.shiftKey){ 
+          e.preventDefault(); 
+          onSend(); 
+        } 
+      });
+      openaiKeyInput.addEventListener('change', ()=>{ 
+        setAPIKey(openaiKeyInput.value.trim()); 
+      });
+      modelSel.addEventListener('change', ()=>{ 
+        localStorage.setItem(LS_MODEL, modelSel.value); 
+      });
 
       // greeting
-      addMessage(state.language==='pt' ? 'Olá — sou a tua IA local. Podes pedir tempo, matemática, hora, KB ou inserir a OpenAI API key para respostas avançadas.' : 'Hello — I am your local AI. Provide an OpenAI API key for advanced answers.');
+      addMessage(state.language==='pt' ? 'Olá — sou a tua IA local. Podes pedir tempo, matemática, hora, KB ou inserir a OpenAI API key para respostas avançadas. Usa 📎 para anexar ficheiros!' : 'Hello — I am your local AI. Provide an OpenAI API key for advanced answers. Use 📎 to attach files!');
     </script>
   </body>
 </html>
